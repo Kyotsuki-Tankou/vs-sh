@@ -1,6 +1,6 @@
 # vs.sh
 
-VS Code over SSH in **one Bash file: `vs.sh`**.
+VS Code over SSH in **one Bash file: `vs.sh`**. Then you can run your [d.sh](https://github.com/SiriusNEO/d.sh) on the familiar VS Code Web UI.
 
 Bootstrap a self-contained, official [code-server](https://github.com/coder/code-server) instance onto any remote Linux host, tunnel it seamlessly through your existing SSH connection, and open it directly in your local browser — without opening firewall ports, requiring root privileges, or needing internet access on the remote machine.
 
