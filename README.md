@@ -25,10 +25,11 @@ http://127.0.0.1:8765
 ## Highlights
 
 - **Single file, zero configuration**: Just download `vs.sh` and run it.
+- **Local mode (`vs.sh local`)**: Instantly boots an official standalone code-server Web UI on any new or clean machine without requiring VS Code, Node.js, or root permissions.
 - **Air-gapped & intranet friendly**: By default (`--transfer=always`), all artifacts are downloaded and cached locally and pushed to the remote host via `scp`. The remote machine **never** needs outbound internet access.
 - **Zero root permissions needed**: Installs cleanly in user-space under `~/.cache/vs.sh`. Leaves system packages untouched.
-- **Secure Unix domain sockets**: code-server binds to a private Unix socket on the remote machine and forwards through SSH to `127.0.0.1`. No remote TCP ports are opened.
-- **Clean lifecycle management**: Automatically stops the remote server when your interactive SSH shell exits (or preserves it with `--keep-server`, with idle timeout protection).
+- **Secure Unix domain sockets**: In remote mode, code-server binds to a private Unix socket on the remote machine and forwards through SSH to `127.0.0.1`. No remote TCP ports are opened.
+- **Clean lifecycle management**: Automatically stops the server when your interactive shell exits or when pressing `Ctrl+C` in local mode (or preserves it with `--keep-server` / `-d`, protected by idle timeout).
 - **Smart tilde expansion**: Safely normalizes local `~` and `~/project` arguments so they expand to the *remote* user's home directory.
 
 ---
@@ -42,9 +43,27 @@ curl -fsSL https://raw.githubusercontent.com/Kyotsuki-Tankou/vs-sh/main/vs.sh -o
 chmod +x vs.sh
 ```
 
-### 2. Connect & Launch
+### 2. Launch
 
-Launch an interactive session and open VS Code in your browser:
+#### Local Mode (No VS Code / Node.js required)
+Spin up a local Web UI on a clean machine for quick editing:
+
+```bash
+# Open current directory in browser
+./vs.sh local
+
+# Open a specific workspace
+./vs.sh local ~/projects/my-app
+
+# Run in background (with idle timeout protection)
+./vs.sh local -d ~/projects/my-app
+
+# Open an interactive local subshell (stops server when you type 'exit')
+./vs.sh local --shell
+```
+
+#### Remote Mode (Over SSH)
+Launch an interactive session on a remote server:
 
 ```bash
 # Connect and open remote home directory
@@ -58,12 +77,11 @@ Launch an interactive session and open VS Code in your browser:
 ```
 
 Once connected, `vs.sh` will:
-1. Probe the remote system (architecture, glibc, existing installation).
+1. Probe the target system (architecture, glibc, existing installation).
 2. Download and cache the official code-server release locally (if not already cached).
-3. Upload and extract code-server into `~/.cache/vs.sh/releases/` on the remote host.
-4. Launch code-server bound to an isolated Unix socket with authentication disabled (protected by SSH).
-5. Establish dynamic port forwarding to your local machine (e.g. `127.0.0.1:8765`).
-6. Automatically open the Web UI in your default browser and drop you into an interactive SSH shell.
+3. Extract code-server into `~/.cache/vs.sh/releases/`.
+4. Launch code-server bound locally or over SSH Unix socket.
+5. Automatically open the Web UI in your default browser.
 
 ---
 
@@ -71,9 +89,26 @@ Once connected, `vs.sh` will:
 
 ```
 vs.sh [options] HOST [REMOTE_DIR]
+vs.sh [options] local [WORKSPACE_DIR]
+vs.sh --local [options] [WORKSPACE_DIR]
 ```
 
-### Transfer Modes (`--transfer`)
+### CLI Options
+
+| Option | Description | Default |
+| :--- | :--- | :--- |
+| `--local` | Run standalone code-server locally without SSH. | Disabled |
+| `--shell` | (Local mode) Open an interactive subshell; server stops when shell exits. | Disabled |
+| `-d, --background, --keep-server` | Keep code-server running in background after shell / script exits. | Disabled |
+| `--transfer MODE` | Transfer policy (remote mode): `always`, `auto`, or `none`. | `always` |
+| `--code-version VER` | Target code-server version (e.g., `4.136.2`). | `4.136.2` |
+| `--download-base URL` | Custom mirror or artifact download base URL. | GitHub Releases |
+| `--cache-dir DIR` | Local artifact download cache directory. | `~/.cache/vs.sh` |
+| `-l, --local-port PORT` | Local browser port (picks first free in 8765..8799). | `8765..8799` |
+| `--idle SECONDS` | Idle shutdown timeout (seconds, must be > 60). | `900` (15m) |
+| `--no-open` | Do not automatically launch the local browser. | Disabled |
+
+### Transfer Modes (`--transfer`, Remote Mode)
 
 | Mode | Behavior | Use Case |
 | :--- | :--- | :--- |
@@ -81,20 +116,7 @@ vs.sh [options] HOST [REMOTE_DIR]
 | `auto` | Try local download + `scp` first; fall back to remote `curl` if local transfer fails. | General networks with mixed connectivity. |
 | `none` | Never upload from local; remote machine downloads code-server directly via `curl`. | Slow local upload speeds or fast remote connection. |
 
-### CLI Options
-
-| Option | Description | Default |
-| :--- | :--- | :--- |
-| `--transfer MODE` | Transfer policy: `always`, `auto`, or `none`. | `always` |
-| `--code-version VER` | Target code-server version (e.g., `4.136.2`). | `4.136.2` |
-| `--download-base URL` | Custom mirror or artifact download base URL. | GitHub Releases |
-| `--cache-dir DIR` | Local artifact download cache directory. | `~/.cache/vs.sh` |
-| `-l, --local-port PORT` | Local browser port (picks first free in 8765..8799). | `8765..8799` |
-| `--idle SECONDS` | Idle shutdown timeout (seconds, must be > 60). | `900` (15m) |
-| `--no-open` | Do not automatically launch the local browser. | Disabled |
-| `--keep-server` | Keep code-server running after SSH shell exits. | Disabled |
-
-### SSH Options
+### SSH Options (Remote Mode)
 
 These arguments are passed directly to `ssh` and `scp`:
 
